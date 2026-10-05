@@ -1,5 +1,5 @@
 trigger:
-- main
+  - main
 
 pool:
   name: 'CartFlow-Agent-Pool'
@@ -39,23 +39,10 @@ steps:
 
 
 # =========================================================
-# 4. TEMPORARY DEBUG
-# Check what SonarQube properties Azure DevOps generated
-# =========================================================
-- script: |
-    echo "=========================================="
-    echo "SonarQube Scanner Parameters"
-    echo "=========================================="
-    echo "$SONARQUBE_SCANNER_PARAMS"
-    echo "=========================================="
-  displayName: 'Debug SonarQube Parameters'
-
-
-# =========================================================
-# 5. Maven build + unit tests + SonarQube analysis
+# 4. Maven build + unit tests
 # =========================================================
 - task: Maven@4
-  displayName: 'Maven Build, Test and SonarQube Analysis'
+  displayName: 'Maven Build and Test'
   inputs:
     mavenPomFile: 'pom.xml'
     goals: 'clean package'
@@ -68,7 +55,17 @@ steps:
 
     mavenVersionOption: 'Default'
 
-    sonarQubeRunAnalysis: true
+    sonarQubeRunAnalysis: false
+
+
+# =========================================================
+# 5. Run SonarQube Analysis
+# =========================================================
+- script: |
+    mvn sonar:sonar \
+      -Dsonar.projectKey=CartFlow \
+      -Dsonar.projectName=CartFlow
+  displayName: 'Maven SonarQube Analysis'
 
 
 # =========================================================
