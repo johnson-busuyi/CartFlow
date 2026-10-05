@@ -1,0 +1,32 @@
+trigger:
+- main
+
+pool:
+  name: 'CartFlow-Agent-Pool'
+
+steps:
+
+- checkout: self
+  displayName: 'Checkout CartFlow Source Code'
+
+- script: |
+    echo "Checking build environment..."
+    java -version
+    mvn -version
+    git --version
+  displayName: 'Verify Build Tools'
+
+- script: mvn clean compile
+  displayName: 'Maven Compile'
+
+- script: mvn test
+  displayName: 'Run Unit Tests'
+
+- script: mvn package
+  displayName: 'Maven Package'
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish CartFlow JAR'
+  inputs:
+    targetPath: '$(System.DefaultWorkingDirectory)/target'
+    artifact: 'CartFlow'
