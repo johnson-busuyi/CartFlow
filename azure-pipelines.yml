@@ -16,15 +16,33 @@ steps:
     git --version
   displayName: 'Verify Build Tools'
 
+# Prepare SonarQube
+- task: SonarQubePrepare@8
+  displayName: 'Prepare SonarQube Analysis'
+  inputs:
+    SonarQube: 'CartFlow-SonarQube'
+    scannerMode: 'other'
+    extraProperties: |
+      sonar.projectKey=CartFlow
+      sonar.projectName=CartFlow
+
 - script: mvn clean compile
   displayName: 'Maven Compile'
 
 - script: mvn test
   displayName: 'Run Unit Tests'
 
-- script: mvn package
-  displayName: 'Maven Package'
+# Build and run SonarQube analysis
+- script: mvn package sonar:sonar
+  displayName: 'Maven Package and SonarQube Analysis'
 
+# Publish SonarQube Quality Gate
+- task: SonarQubePublish@8
+  displayName: 'Publish SonarQube Quality Gate'
+  inputs:
+    pollingTimeoutSec: '300'
+
+# Publish the JAR
 - task: PublishPipelineArtifact@1
   displayName: 'Publish CartFlow JAR'
   inputs:
