@@ -6,47 +6,83 @@ pool:
 
 steps:
 
+# =========================================================
+# 1. Checkout CartFlow source code
+# =========================================================
 - checkout: self
   displayName: 'Checkout CartFlow Source Code'
 
+
+# =========================================================
+# 2. Verify tools installed on the self-hosted agent
+# =========================================================
 - script: |
     echo "Checking build environment..."
+    echo "-----------------------------"
     java -version
     mvn -version
     git --version
   displayName: 'Verify Build Tools'
 
-# Prepare SonarQube analysis
+
+# =========================================================
+# 3. Prepare SonarQube analysis
+# =========================================================
 - task: SonarQubePrepare@8
   displayName: 'Prepare SonarQube Analysis'
   inputs:
     SonarQube: 'CartFlow-SonarQube'
     scannerMode: 'other'
-   
+    extraProperties: |
       sonar.projectKey=CartFlow
       sonar.projectName=CartFlow
-      
 
-# Maven build, tests, package, and SonarQube analysis
+
+# =========================================================
+# 4. TEMPORARY DEBUG
+# Check what SonarQube properties Azure DevOps generated
+# =========================================================
+- script: |
+    echo "=========================================="
+    echo "SonarQube Scanner Parameters"
+    echo "=========================================="
+    echo "$SONARQUBE_SCANNER_PARAMS"
+    echo "=========================================="
+  displayName: 'Debug SonarQube Parameters'
+
+
+# =========================================================
+# 5. Maven build + unit tests + SonarQube analysis
+# =========================================================
 - task: Maven@4
   displayName: 'Maven Build, Test and SonarQube Analysis'
   inputs:
     mavenPomFile: 'pom.xml'
     goals: 'clean package'
+
     publishJUnitResults: true
     testResultsFiles: '**/surefire-reports/TEST-*.xml'
+
     javaHomeOption: 'Path'
     jdkDirectory: '/usr/lib/jvm/java-17-openjdk-amd64'
+
     mavenVersionOption: 'Default'
+
     sonarQubeRunAnalysis: true
 
-# Publish SonarQube Quality Gate
+
+# =========================================================
+# 6. Publish SonarQube Quality Gate result
+# =========================================================
 - task: SonarQubePublish@8
   displayName: 'Publish SonarQube Quality Gate'
   inputs:
     pollingTimeoutSec: '300'
 
-# Publish CartFlow JAR
+
+# =========================================================
+# 7. Publish generated CartFlow JAR
+# =========================================================
 - task: PublishPipelineArtifact@1
   displayName: 'Publish CartFlow JAR'
   inputs:
