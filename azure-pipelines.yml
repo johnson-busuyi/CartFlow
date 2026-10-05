@@ -16,7 +16,7 @@ steps:
     git --version
   displayName: 'Verify Build Tools'
 
-# Prepare SonarQube
+# Prepare SonarQube analysis
 - task: SonarQubePrepare@8
   displayName: 'Prepare SonarQube Analysis'
   inputs:
@@ -26,15 +26,18 @@ steps:
       sonar.projectKey=CartFlow
       sonar.projectName=CartFlow
 
-- script: mvn clean compile
-  displayName: 'Maven Compile'
-
-- script: mvn test
-  displayName: 'Run Unit Tests'
-
-# Build and run SonarQube analysis
-- script:  mvn package org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-  displayName: 'Maven Package and SonarQube Analysis'
+# Maven build, tests, package, and SonarQube analysis
+- task: Maven@4
+  displayName: 'Maven Build, Test and SonarQube Analysis'
+  inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'clean package'
+    publishJUnitResults: true
+    testResultsFiles: '**/surefire-reports/TEST-*.xml'
+    javaHomeOption: 'Path'
+    jdkDirectory: '/usr/lib/jvm/java-17-openjdk-amd64'
+    mavenVersionOption: 'Default'
+    sonarQubeRunAnalysis: true
 
 # Publish SonarQube Quality Gate
 - task: SonarQubePublish@8
@@ -42,7 +45,7 @@ steps:
   inputs:
     pollingTimeoutSec: '300'
 
-# Publish the JAR
+# Publish CartFlow JAR
 - task: PublishPipelineArtifact@1
   displayName: 'Publish CartFlow JAR'
   inputs:
