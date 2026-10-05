@@ -7,25 +7,37 @@ pool:
 steps:
 
 # =========================================================
-# 1. Checkout CartFlow source code
+# 1. CHECKOUT SOURCE CODE
 # =========================================================
 - checkout: self
   displayName: 'Checkout CartFlow Source Code'
 
 
 # =========================================================
-# 2. Verify build tools
+# 2. VERIFY BUILD TOOLS
 # =========================================================
-- script: |
+- bash: |
     echo "Checking build environment..."
+
+    echo "Java:"
     java -version
+
+    echo "Maven:"
     mvn -version
+
+    echo "Git:"
     git --version
+
+    echo "Docker:"
+    docker --version
+
+    echo "Trivy:"
+    trivy --version
   displayName: 'Verify Build Tools'
 
 
 # =========================================================
-# 3. Prepare SonarQube analysis
+# 3. PREPARE SONARQUBE ANALYSIS
 # =========================================================
 - task: SonarQubePrepare@8
   displayName: 'Prepare SonarQube Analysis'
@@ -38,8 +50,11 @@ steps:
 
 
 # =========================================================
-# 4. Remove unsupported branch parameter
-#    Required for SonarQube Community Build
+# 4. REMOVE UNSUPPORTED SONARQUBE BRANCH PARAMETER
+#
+# SonarQube Community Build does not support branch analysis.
+# Azure DevOps automatically adds sonar.branch.name, so we
+# remove it before running the Maven/SonarQube analysis.
 # =========================================================
 - bash: |
     echo "Removing sonar.branch.name for SonarQube Community Build..."
@@ -54,7 +69,7 @@ steps:
 
 
 # =========================================================
-# 5. Maven build + tests + SonarQube analysis
+# 5. MAVEN BUILD + UNIT TESTS + SONARQUBE
 # =========================================================
 - task: Maven@4
   displayName: 'Maven Build, Test and SonarQube Analysis'
@@ -74,7 +89,7 @@ steps:
 
 
 # =========================================================
-# 6. Publish SonarQube Quality Gate
+# 6. PUBLISH SONARQUBE QUALITY GATE
 # =========================================================
 - task: SonarQubePublish@8
   displayName: 'Publish SonarQube Quality Gate'
@@ -83,8 +98,10 @@ steps:
 
 
 # =========================================================
-# 7. OWASP Dependency-Check
-#    NVD_API_KEY comes from Azure DevOps secret variable
+# 7. OWASP DEPENDENCY-CHECK
+#
+# NVD_API_KEY is stored as a secret Azure DevOps variable.
+# Do NOT put the actual API key in this YAML file.
 # =========================================================
 - bash: |
     echo "Starting OWASP Dependency-Check..."
@@ -99,7 +116,7 @@ steps:
 
 
 # =========================================================
-# 8. Verify OWASP report
+# 8. VERIFY OWASP REPORT
 # =========================================================
 - bash: |
     echo "Checking Dependency-Check report..."
@@ -115,7 +132,71 @@ steps:
 
 
 # =========================================================
-# 9. Publish OWASP report as Azure DevOps artifact
+# 9. BUILD DOCKER IMAGE
+#
+# Two tags are created:
+#   - Unique Azure DevOps Build ID
+#   - latest
+#
+# Example:
+# cartflowregistry.azurecr.io/cartflow:125
+# cartflowregistry.azurecr.io/cartflow:latest
+# =========================================================
+- bash: |
+    echo "Building CartFlow Docker image..."
+
+    docker build \
+      -t cartflowregistry.azurecr.io/cartflow:$(Build.BuildId) \
+      -t cartflowregistry.azurecr.io/cartflow:latest \
+      .
+
+    echo "Docker image built successfully."
+
+    docker images | grep cartflow
+  displayName: 'Build CartFlow Docker Image'
+
+
+# =========================================================
+# 10. TRIVY CONTAINER SECURITY SCAN
+#
+# Scan the exact image that will be pushed to ACR.
+# Pipeline fails if HIGH or CRITICAL vulnerabilities exist.
+# =========================================================
+- bash: |
+    echo "Scanning CartFlow Docker image with Trivy..."
+
+    trivy image \
+      --scanners vuln \
+      --severity HIGH,CRITICAL \
+      --exit-code 1 \
+      cartflowregistry.azurecr.io/cartflow:$(Build.BuildId)
+
+    echo "Trivy security scan passed."
+  displayName: 'Trivy Container Security Scan'
+
+
+# =========================================================
+# 11. PUSH APPROVED DOCKER IMAGE TO ACR
+#
+# Service connection:
+# CartFlow-ACR
+#
+# Registry:
+# cartflowregistry.azurecr.io
+# =========================================================
+- task: Docker@2
+  displayName: 'Push CartFlow Image to ACR'
+  inputs:
+    command: 'push'
+    containerRegistry: 'CartFlow-ACR'
+    repository: 'cartflow'
+    tags: |
+      $(Build.BuildId)
+      latest
+
+
+# =========================================================
+# 12. PUBLISH OWASP REPORT
 # =========================================================
 - task: PublishPipelineArtifact@1
   displayName: 'Publish OWASP Dependency-Check Report'
@@ -125,42 +206,10 @@ steps:
 
 
 # =========================================================
-# 10. Publish CartFlow JAR
+# 13. PUBLISH CARTFLOW BUILD ARTIFACTS
 # =========================================================
 - task: PublishPipelineArtifact@1
   displayName: 'Publish CartFlow JAR'
   inputs:
     targetPath: '$(System.DefaultWorkingDirectory)/target'
     artifact: 'CartFlow'
-
-
-    # =========================================================
-# Docker Build
-# =========================================================
-- bash: |
-    echo "Building CartFlow Docker image..."
-
-    docker build \
-      -t cartflow:$(Build.BuildId) \
-      -t cartflow:latest \
-      .
-
-    echo "Docker image built successfully."
-    docker images | grep cartflow
-  displayName: 'Build CartFlow Docker Image'
-
-# =========================================================
-# Trivy Container Vulnerability Scan
-# Fail pipeline for HIGH or CRITICAL vulnerabilities
-# =========================================================
-- bash: |
-    echo "Scanning CartFlow Docker image with Trivy..."
-
-    trivy image \
-      --scanners vuln \
-      --severity HIGH,CRITICAL \
-      --exit-code 1 \
-      cartflow:$(Build.BuildId)
-
-    echo "Trivy security scan passed."
-  displayName: 'Trivy Container Security Scan'
