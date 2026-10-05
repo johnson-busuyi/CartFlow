@@ -22,10 +22,10 @@ steps:
   inputs:
     SonarQube: 'CartFlow-SonarQube'
     scannerMode: 'other'
-    extraProperties: |
+   
       sonar.projectKey=CartFlow
       sonar.projectName=CartFlow
-      sonar.branch.name=
+      
 
 # Maven build, tests, package, and SonarQube analysis
 - task: Maven@4
