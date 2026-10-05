@@ -33,7 +33,7 @@ steps:
   displayName: 'Run Unit Tests'
 
 # Build and run SonarQube analysis
-- script: mvn package sonar:sonar
+- script:  mvn package org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
   displayName: 'Maven Package and SonarQube Analysis'
 
 # Publish SonarQube Quality Gate
