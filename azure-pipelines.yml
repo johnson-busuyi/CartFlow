@@ -39,8 +39,7 @@ steps:
 
 # =========================================================
 # 4. Remove unsupported branch parameter
-#    SonarQube Community Build analyzes the main project
-#    without sonar.branch.name
+#    Required for SonarQube Community Build
 # =========================================================
 - bash: |
     echo "Removing sonar.branch.name for SonarQube Community Build..."
@@ -84,7 +83,49 @@ steps:
 
 
 # =========================================================
-# 7. Publish CartFlow JAR
+# 7. OWASP Dependency-Check
+#    NVD_API_KEY comes from Azure DevOps secret variable
+# =========================================================
+- bash: |
+    echo "Starting OWASP Dependency-Check..."
+
+    mvn org.owasp:dependency-check-maven:check \
+      -DnvdApiKey="$NVD_API_KEY"
+
+    echo "OWASP Dependency-Check completed."
+  displayName: 'OWASP Dependency-Check'
+  env:
+    NVD_API_KEY: $(NVD_API_KEY)
+
+
+# =========================================================
+# 8. Verify OWASP report
+# =========================================================
+- bash: |
+    echo "Checking Dependency-Check report..."
+
+    if [ -f "target/dependency-check-report.html" ]; then
+      echo "Dependency-Check report generated successfully."
+      ls -lh target/dependency-check-report.html
+    else
+      echo "ERROR: Dependency-Check report was not generated."
+      exit 1
+    fi
+  displayName: 'Verify OWASP Report'
+
+
+# =========================================================
+# 9. Publish OWASP report as Azure DevOps artifact
+# =========================================================
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish OWASP Dependency-Check Report'
+  inputs:
+    targetPath: '$(System.DefaultWorkingDirectory)/target/dependency-check-report.html'
+    artifact: 'OWASP-Dependency-Check-Report'
+
+
+# =========================================================
+# 10. Publish CartFlow JAR
 # =========================================================
 - task: PublishPipelineArtifact@1
   displayName: 'Publish CartFlow JAR'
