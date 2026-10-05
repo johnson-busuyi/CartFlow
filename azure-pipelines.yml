@@ -131,36 +131,27 @@ steps:
   displayName: 'Verify OWASP Report'
 
 
+  # =========================================================
+# 9. BUILD DOCKER IMAGE FOR ACR
 # =========================================================
-# 9. BUILD DOCKER IMAGE
-#
-# Two tags are created:
-#   - Unique Azure DevOps Build ID
-#   - latest
-#
-# Example:
-# cartflowregistry.azurecr.io/cartflow:125
-# cartflowregistry.azurecr.io/cartflow:latest
-# =========================================================
-- bash: |
-    echo "Building CartFlow Docker image..."
-
-    docker build \
-      -t cartflowregistry.azurecr.io/cartflow:$(Build.BuildId) \
-      -t cartflowregistry.azurecr.io/cartflow:latest \
-      .
-
-    echo "Docker image built successfully."
-
-    docker images | grep cartflow
+- task: Docker@2
   displayName: 'Build CartFlow Docker Image'
+  inputs:
+    command: 'build'
+    containerRegistry: 'CartFlow-ACR'
+    repository: 'cartflow'
+    Dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+    buildContext: '$(Build.SourcesDirectory)'
+    tags: |
+      $(Build.BuildId)
+      latest
 
 
 # =========================================================
 # 10. TRIVY CONTAINER SECURITY SCAN
 #
-# Scan the exact image that will be pushed to ACR.
-# Pipeline fails if HIGH or CRITICAL vulnerabilities exist.
+# Scan BEFORE pushing the image to ACR.
+# HIGH or CRITICAL vulnerabilities will fail the pipeline.
 # =========================================================
 - bash: |
     echo "Scanning CartFlow Docker image with Trivy..."
@@ -176,13 +167,7 @@ steps:
 
 
 # =========================================================
-# 11. PUSH APPROVED DOCKER IMAGE TO ACR
-#
-# Service connection:
-# CartFlow-ACR
-#
-# Registry:
-# cartflowregistry.azurecr.io
+# 11. PUSH APPROVED IMAGE TO ACR
 # =========================================================
 - task: Docker@2
   displayName: 'Push CartFlow Image to ACR'
@@ -193,7 +178,6 @@ steps:
     tags: |
       $(Build.BuildId)
       latest
-
 
 # =========================================================
 # 12. PUBLISH OWASP REPORT
