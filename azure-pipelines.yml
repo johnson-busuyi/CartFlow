@@ -1,5 +1,5 @@
 trigger:
-  - main
+- main
 
 pool:
   name: 'CartFlow-Agent-Pool'
@@ -14,11 +14,10 @@ steps:
 
 
 # =========================================================
-# 2. Verify tools installed on the self-hosted agent
+# 2. Verify build tools
 # =========================================================
 - script: |
     echo "Checking build environment..."
-    echo "-----------------------------"
     java -version
     mvn -version
     git --version
@@ -39,10 +38,27 @@ steps:
 
 
 # =========================================================
-# 4. Maven build + unit tests
+# 4. Remove unsupported branch parameter
+#    SonarQube Community Build analyzes the main project
+#    without sonar.branch.name
+# =========================================================
+- bash: |
+    echo "Removing sonar.branch.name for SonarQube Community Build..."
+
+    CLEAN_PARAMS=$(echo "$SONARQUBE_SCANNER_PARAMS" | \
+      sed -E 's/,"sonar.branch.name":"[^"]*"//g')
+
+    echo "##vso[task.setvariable variable=SONARQUBE_SCANNER_PARAMS]$CLEAN_PARAMS"
+
+    echo "Branch parameter removed."
+  displayName: 'Remove SonarQube Branch Parameter'
+
+
+# =========================================================
+# 5. Maven build + tests + SonarQube analysis
 # =========================================================
 - task: Maven@4
-  displayName: 'Maven Build and Test'
+  displayName: 'Maven Build, Test and SonarQube Analysis'
   inputs:
     mavenPomFile: 'pom.xml'
     goals: 'clean package'
@@ -55,21 +71,11 @@ steps:
 
     mavenVersionOption: 'Default'
 
-    sonarQubeRunAnalysis: false
+    sonarQubeRunAnalysis: true
 
 
 # =========================================================
-# 5. Run SonarQube Analysis
-# =========================================================
-- script: |
-    mvn sonar:sonar \
-      -Dsonar.projectKey=CartFlow \
-      -Dsonar.projectName=CartFlow
-  displayName: 'Maven SonarQube Analysis'
-
-
-# =========================================================
-# 6. Publish SonarQube Quality Gate result
+# 6. Publish SonarQube Quality Gate
 # =========================================================
 - task: SonarQubePublish@8
   displayName: 'Publish SonarQube Quality Gate'
@@ -78,7 +84,7 @@ steps:
 
 
 # =========================================================
-# 7. Publish generated CartFlow JAR
+# 7. Publish CartFlow JAR
 # =========================================================
 - task: PublishPipelineArtifact@1
   displayName: 'Publish CartFlow JAR'
