@@ -132,3 +132,35 @@ steps:
   inputs:
     targetPath: '$(System.DefaultWorkingDirectory)/target'
     artifact: 'CartFlow'
+
+
+    # =========================================================
+# Docker Build
+# =========================================================
+- bash: |
+    echo "Building CartFlow Docker image..."
+
+    docker build \
+      -t cartflow:$(Build.BuildId) \
+      -t cartflow:latest \
+      .
+
+    echo "Docker image built successfully."
+    docker images | grep cartflow
+  displayName: 'Build CartFlow Docker Image'
+
+# =========================================================
+# Trivy Container Vulnerability Scan
+# Fail pipeline for HIGH or CRITICAL vulnerabilities
+# =========================================================
+- bash: |
+    echo "Scanning CartFlow Docker image with Trivy..."
+
+    trivy image \
+      --scanners vuln \
+      --severity HIGH,CRITICAL \
+      --exit-code 1 \
+      cartflow:$(Build.BuildId)
+
+    echo "Trivy security scan passed."
+  displayName: 'Trivy Container Security Scan'
