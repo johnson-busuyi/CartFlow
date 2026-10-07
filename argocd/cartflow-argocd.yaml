@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cartflow
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/johnson-busuyi/CartFlow.git
+    targetRevision: main
+    path: cartflow-chart
+    helm:
+      valueFiles:
+        - values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cartflow
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
