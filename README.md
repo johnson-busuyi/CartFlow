@@ -1,1 +1,1 @@
-# CartFlow -- Nice project
+# CartFlow
