@@ -3067,6 +3067,9 @@ Persist required kernel settings and use persistent SonarQube storage/database f
 
 ---
 
+## “What does your CartFlow project actually accomplish?”
+> CartFlow is a sample customer-facing application that I used to demonstrate an end-to-end DevSecOps lifecycle. In a real organization, developers would build features such as authentication, product browsing, cart management, and checkout. My responsibility as the DevOps engineer is to automate how that application is built, tested, security-scanned, containerized, stored in ACR, deployed to AKS through Helm and Argo CD, and monitored with Prometheus and Grafana. The goal is to deliver application changes to customers reliably, securely, and consistently.
+
 # What This Project Demonstrates
 
 CartFlow demonstrates practical experience with:
