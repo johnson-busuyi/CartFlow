@@ -1,4 +1,4 @@
-# CartFlow — End-to-End DevSecOps & GitOps Project
+## CartFlow — End-to-End DevSecOps & GitOps Project
 
 CartFlow is a hands-on DevSecOps portfolio project that demonstrates how a simple Java application can move through a production-style software delivery lifecycle using GitHub, Azure DevOps, Maven, SonarQube, OWASP Dependency-Check, Docker, Trivy, Azure Container Registry (ACR), Azure Kubernetes Service (AKS), Helm, Argo CD, Prometheus, and Grafana.
 
